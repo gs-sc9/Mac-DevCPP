@@ -1,0 +1,74 @@
+name: Build Mac-DevCPP
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build_arm64:
+    runs-on: macos-26
+    steps:
+      - name: Checkout代码
+        uses: actions/checkout@v4
+
+      - name: 安装Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安装依赖
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install PyQt6 pyinstaller
+
+      - name: 清理旧缓存 & PyInstaller打包arm64
+        run: |
+          rm -rf build dist *.spec
+          python3 -m PyInstaller --noconsole --onedir main_gui.py
+          mkdir -p ./dist/main_gui.app/Contents/Frameworks
+          cp *.command ./dist/main_gui.app/Contents/Frameworks/
+          chmod +x ./dist/main_gui.app/Contents/Frameworks/*.command
+          xattr -cr ./dist/main_gui.app/Contents/Frameworks/*.command
+          mv ./dist/main_gui.app ./Mac-DevCPP_arm.app
+
+      - name: 上传arm包为产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mac-DevCPP-arm64
+          path: Mac-DevCPP_arm.app
+          retention-days: 7
+
+
+  build_x86_64:
+    runs-on: macos-26-intel
+    steps:
+      - name: Checkout代码
+        uses: actions/checkout@v4
+
+      - name: 安装Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安装依赖
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install PyQt6 pyinstaller
+
+      - name: 清理缓存，打包Intel版本
+        run: |
+          rm -rf build dist *.spec
+          python3 -m PyInstaller --noconsole --onedir main_gui.py
+          mkdir -p ./dist/main_gui.app/Contents/Frameworks
+          cp *.command ./dist/main_gui.app/Contents/Frameworks/
+          chmod +x ./dist/main_gui.app/Contents/Frameworks/*.command
+          xattr -cr ./dist/main_gui.app/Contents/Frameworks/*.command
+          mv ./dist/main_gui.app ./Mac-DevCPP_intel.app
+
+      - name: 上传intel包为产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mac-DevCPP-x86_64
+          path: Mac-DevCPP_intel.app
+          retention-days: 7
